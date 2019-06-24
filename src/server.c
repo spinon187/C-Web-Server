@@ -82,7 +82,7 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 void get_d20(int fd)
 {
     // Generate a random number between 1 and 20 inclusive
-    int num = rand() % 20;
+    int num = 1 + rand() % 20;
     char roll[sizeof(num)];
     sprintf(roll, "%d", num);
     // Use send_response() to send it back as text/plain data
@@ -126,12 +126,6 @@ void get_file(int fd, struct cache *cache, char *request_path)
 
     snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
     filedata = file_load(filepath);
-
-    // if (filedata == NULL) {
-    //     // TODO: make this non-fatal
-    //     fprintf(stderr, "cannot find system 404 file\n");
-    //     exit(3);
-    // }
 
     mime_type = mime_type_get(filepath);
 
