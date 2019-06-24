@@ -52,13 +52,19 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 {
     const int max_response_size = 262144;
     char response[max_response_size];
-
     // Build HTTP response and store it in response
-
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
-
+    char date;
+    sprintf(
+        response,
+		"%s\n"
+        "Connection: close\n"
+		"Content-Length: %d\n"
+        "Content-Type: %s\n"
+		"\n"
+		"%s",
+		header, content_length, content_type, body
+    );
+    int response_length = strlen(response); 
     // Send it all!
     int rv = send(fd, response, response_length, 0);
 
@@ -76,16 +82,11 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 void get_d20(int fd)
 {
     // Generate a random number between 1 and 20 inclusive
-    
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
-
+    int num = rand() % 20;
+    char roll[sizeof(num)];
+    sprintf(roll, "%d", num);
     // Use send_response() to send it back as text/plain data
-
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+    send_response(fd, "HTTP/1.1 200 OK", "text/plain", roll, sizeof(roll));
 }
 
 /**
@@ -153,19 +154,19 @@ void handle_http_request(int fd, struct cache *cache)
         return;
     }
 
-
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
-
     // Read the first two components of the first line of the request 
- 
-    // If GET, handle the get endpoints
-
-    //    Check if it's /d20 and handle that special case
-    //    Otherwise serve the requested file by calling get_file()
-
-
+    char method[128];
+    char path[8192];
+    sscanf(request, "%s %s", method, path);
+    if(strcmp(method, "GET") ==  0){
+        if(strcmp(path, "/d20") ==  0){
+            get_d20(fd);
+        }
+        else {
+            // get_file(fd, cache, path);
+            fprintf("%s", path);
+        }
+    }
     // (Stretch) If POST, handle the post request
 }
 
@@ -204,6 +205,7 @@ int main(void)
             perror("accept");
             continue;
         }
+
 
         // Print out a message that we got the connection
         inet_ntop(their_addr.ss_family,
