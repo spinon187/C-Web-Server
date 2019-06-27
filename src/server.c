@@ -54,21 +54,25 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     char response[max_response_size];
     // Build HTTP response and store it in response
     char date;
-    sprintf(
+    int response_length = sprintf(
         response,
 		"%s\n"
         "Connection: close\n"
 		"Content-Length: %d\n"
         "Content-Type: %s\n"
-		"\n"
-		"%s",
-		header, content_length, content_type, body
+		"\n",
+		header, content_length, content_type
     );
-    int response_length = strlen(response); 
     // Send it all!
     int rv = send(fd, response, response_length, 0);
 
     if (rv < 0) {
+        perror("send");
+    }
+
+    rv = send(fd, body, content_length, 0);
+
+        if (rv < 0) {
         perror("send");
     }
 
@@ -124,14 +128,27 @@ void get_file(int fd, struct cache *cache, char *request_path)
     struct file_data *filedata; 
     char *mime_type;
 
-    snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
-    filedata = file_load(filepath);
+    struct cache_entry *ce = cache_get(cache, request_path);
 
-    mime_type = mime_type_get(filepath);
+    if(ce == NULL){
+        snprintf(filepath, sizeof filepath, "%s%s", SERVER_ROOT, request_path);
+        filedata = file_load(filepath);
 
-    send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+        if (filedata == NULL){
+            resp_404(fd);
+            return;
+        }
 
-    file_free(filedata);
+        mime_type = mime_type_get(filepath);
+        cache_put(cache, request_path, mime_type, filedata->data, filedata->size);
+        printf("MISS\n");
+        send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+        file_free(filedata);
+    }
+    else {
+        printf("HIT\n");
+        send_response(fd, "HTTP/1.1 200 OK", ce->content_type, ce->content, ce->content_length);
+    }
 }
 
 /**
